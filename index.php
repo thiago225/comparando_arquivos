@@ -1,101 +1,58 @@
-<?php
-include_once __DIR__. '/configs.php';
-require __DIR__.'/composer/vendor/autoload.php';
+<!DOCTYPE html>
+<html lang="en">
 
-use PhpOffice\PhpSpreadsheet\IOFactory;
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparador de Planilhas</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
 
-// Abrindo as pastas
-$parceiros = opendir(DIR_ARQUIVOS_PARCEIROS);
-$ativmob = opendir(DIR_ARQUIVOS_ATIVMOB);
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">Comparador de Planilhas</h1>
+        <form method="post" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="file1" class="form-label">Carregar Planilha 1</label>
+                <input type="file" class="form-control" id="file1" name="file1" required>
+            </div>
+            <div class="mb-3">
+                <label for="sheetName1" class="form-label">Nome da Aba na Planilha 1</label>
+                <input type="text" class="form-control" id="sheetName1" name="sheetName1" placeholder="Ex: Base Mottu" required>
+            </div>
+            <div class="mb-3">
+                <label for="columnName1" class="form-label">Nome da Coluna de Identificação na Planilha 1</label>
+                <input type="text" class="form-control" id="columnName1" name="columnName1" placeholder="Ex: J" required>
+            </div>
+            <div class="mb-3">
+                <label for="columnFilial1" class="form-label">Coluna de Identificação na Planilha 1</label>
+                <input type="text" class="form-control" id="columnFilial1" name="columnFilial1" placeholder="Ex: A" required>
+            </div>
+            <hr>
+            <div class="mb-3">
+                <label for="file2" class="form-label">Carregar Planilha 2</label>
+                <input type="file" class="form-control" id="file2" name="file2" required>
+            </div>
+            <div class="mb-3">
+                <label for="sheetName2" class="form-label">Nome da Aba na Planilha 2</label>
+                <input type="text" class="form-control" id="sheetName2" name="sheetName2" placeholder="Ex: Aba1" required>
+            </div>
+            <div class="mb-3">
+                <label for="columnName2" class="form-label">Nome da Coluna de Identificação na Planilha 2</label>
+                <input type="text" class="form-control" id="columnName2" name="columnName2" placeholder="Ex: N° Sol. PSD" required>
+            </div>
+            <div class="mb-3">
+                <label for="columnFilial2" class="form-label">Coluna de Identificação na Planilha 2</label>
+                <input type="text" class="form-control" id="columnFilial2" name="columnFilial2" placeholder="Ex: A" required>
+            </div>
+            <button type="submit" id="submit" class="btn btn-primary">Comparar Planilhas</button>
+        </form>
+    </div>
 
-$arquivosParceiros = [];
-$arquivosAtivmob = [];
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="src/js/index.js"> </script>
+</body>
 
-// Listando os arquivos na pasta de parceiros
-while ($nome_item = readdir($parceiros)) {
-    if ($nome_item != "." && $nome_item != ".." && !is_dir(DIR_ARQUIVOS_PARCEIROS . '/' . $nome_item)) {
-        $arquivosParceiros[] = DIR_ARQUIVOS_PARCEIROS . '/' . $nome_item;
-    }
-}
-
-// Listando os arquivos na pasta de Ativmob
-while ($nome_item = readdir($ativmob)) {
-    if ($nome_item != "." && $nome_item != ".." && !is_dir(DIR_ARQUIVOS_ATIVMOB . '/' . $nome_item)) {
-        $arquivosAtivmob[] = DIR_ARQUIVOS_ATIVMOB . '/' . $nome_item;
-    }
-}
-
-// Verificando se encontramos os arquivos necessários
-if (count($arquivosParceiros) == 0 || count($arquivosAtivmob) == 0) {
-    die("Não foram encontrados arquivos nas pastas especificadas.");
-}
-
-// Carregando as planilhas (considerando que há apenas um arquivo por pasta)
-$spreadsheet1 = IOFactory::load($arquivosParceiros[0]);
-$spreadsheet2 = IOFactory::load($arquivosAtivmob[0]);
-
-// Selecionando a aba "Base Mottu" na planilha de parceiros
-$sheetParceiro = $spreadsheet1->getSheetByName('Base Mottu');
-$sheetAtivmob = $spreadsheet2->getSheet(0);
-
-// Verificando se as abas foram encontradas
-if ($sheetParceiro === null) {
-    die("A aba 'Base Mottu' não foi encontrada na planilha do parceiro.");
-}
-
-// Obtendo o número de linhas de ambas as planilhas
-$rowCountParceiro = $sheetParceiro->getHighestRow();
-$rowCountAtivmob = $sheetAtivmob->getHighestRow();
-
-// Inicializando arrays para armazenar os valores
-$colunaParceiro = [];
-$colunaAtivmob = [];
-
-// Iterando sobre as linhas e extraindo os valores das colunas específicas
-for ($row = 1; $row <= $rowCountParceiro; $row++) {
-    $pedido = $sheetParceiro->getCell('J' . $row)->getValue(); // Substitua 'A' pela coluna correta para 'Pedido Mottu'
-    $filial = $sheetParceiro->getCell('M' . $row)->getValue();
-    if ($pedido !== null) {
-        $colunaParceiro[] = json_encode(array("delivery_id" => $pedido, "filial" => $filial));
-    }
-}
-
-for ($row = 1; $row <= $rowCountAtivmob; $row++) {
-    $solPsd = $sheetAtivmob->getCell('E' . $row)->getValue(); // Coluna 'N° Sol. PSD'
-    $filial = $sheetAtivmob->getCell('A' . $row)->getValue(); // Coluna 'Filial'
-
-    // Verificação e extração de RichText
-    if ($solPsd instanceof \PhpOffice\PhpSpreadsheet\RichText\RichText) {
-        $solPsd = $solPsd->getPlainText();
-    }
-    if ($filial instanceof \PhpOffice\PhpSpreadsheet\RichText\RichText) {
-        $filial = $filial->getPlainText();
-    }
-
-    if ($solPsd !== null) {
-        $colunaAtivmob[] = json_encode(array("delivery_id" => $solPsd, "filial" => $filial));
-    }
-}
-
-
-// foreach ($colunaParceiro as $info) {
-//     foreach ($colunaAtivmob as $value) {
-//         var_dump($value);
-//     }
-    
-// }
-
-// Comparando as colunas
-// $diferencas = array_diff($colunaParceiro, $colunaAtivmob);
-
-// if (empty($diferencas)) {
-//     echo "Todas as entradas coincidem.\n";
-// } else {
-//     echo "Diferenças encontradas:\n";
-//     print_r($diferencas);
-// }
-
-// Fechar os diretórios abertos
-closedir($parceiros);
-closedir($ativmob);
-?>
+</html>
